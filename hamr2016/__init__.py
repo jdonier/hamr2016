@@ -40,10 +40,10 @@ class Track:
                 # Delete the note from the currently playing notes
                 del current[pitch]
                     
-                    notes = np.rec.array(notes, names=['pitch', 'start', 'end'])
-                    return Track(notes, pattern.resolution, tempo)
+        notes = np.rec.array(notes, names=['pitch', 'start', 'end'])
+        return Track(notes, pattern.resolution, tempo)
 
-@property
+    @property
     def duration(self):
         return self.tick_to_time(np.max(self.notes.end))
     
