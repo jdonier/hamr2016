@@ -10,6 +10,7 @@ dependencies:
 - jupyter
 - librosa
 - pandas
+- tensorflow
 - pip:
   - python-midi==0.2.4
-
+  - tqdm
