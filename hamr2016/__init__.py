@@ -9,12 +9,39 @@ from warnings import warn
 
 class Track:
     def __init__(self, notes, resolution, tempo):
+        """
+        Track containing notes.
+
+        Parameters
+        ----------
+        notes : np.recarray
+            rows with `(pitch, start, end)` entries in units of midi and ticks, respectively
+        resolution : int
+            number of ticks per beat
+        tempo : int
+            beats per minute
+        """
         self.notes = notes
         self.resolution = resolution
         self.tempo = tempo
     
     @staticmethod
     def from_file(filename, track_id=1, tempo=120):
+        """
+        Load a track from file.
+
+        Parameters
+        ----------
+        filename
+        track_id : int
+            index of the track to read (default is 1)
+        tempo : int
+            beats per minute (120 if it cannot be read from the midi file)
+
+        Returns
+        -------
+        track : Track
+        """
         pattern = midi.read_midifile(filename)
         pattern.make_ticks_abs()
         # Process the metadata
@@ -72,6 +99,22 @@ class Track:
         return display.Audio(samples, rate=sample_rate)
     
     def to_matrix(self, lower_bound=21, upper_bound=109, resolution=4, strict=True):
+        """
+        Convert notes to a matrix representation.
+
+        Parameters
+        ----------
+        lower_bound
+        upper_bound
+        resolution : int
+            number of pixels per beat
+        strict : bool
+            raise an error if a note lies outside the bounds if `True` and warn otherwise
+
+        Returns
+        -------
+
+        """
         # Get the total number of beats
         num_beats = np.ceil(self.tick_to_beat(np.max(self.notes.end)) * resolution).astype(int)
         num_midis = upper_bound - lower_bound
@@ -84,6 +127,15 @@ class Track:
                     raise ValueError(message)
                 else:
                     warn(message)
+                    continue
+
+            if pitch >= upper_bound:
+                message = "pitch of {} is larger than or equal to the upper bound {}".format(pitch, upper_bound)
+                if strict:
+                    raise ValueError(message)
+                else:
+                    warn(message)
+                    continue
             # Compute the offsets
             start = np.round(self.tick_to_beat(start) * resolution).astype(int)
             end = np.round(self.tick_to_beat(end) * resolution).astype(int)
@@ -98,6 +150,7 @@ class Matrix:
         self.values = values
         self.lower_bound = lower_bound
         self.resolution = resolution
+        self.tempo = tempo
     
     def show(self, ax=None, **kwargs):
         kwargs_default = {
@@ -110,18 +163,54 @@ class Matrix:
         return ax.imshow(self.values, **kwargs_default)
     
     def pixel_to_beat(self, pixel):
-        return pixel * self.resolution
+        return pixel / self.resolution
     
     def beat_to_pixel(self, beat):
-        return np.round(beat / self.resolution)
+        return beat * self.resolution
     
     def to_track(self, resolution=960):
-        for column in self.values.T:
-            notes = self.lower_bound + np.nonzero(column)[0]
+        playing = {}
+        notes = []
 
-        raise NotImplementedError
+        for i, column in enumerate(self.values.T):
+            current = set(self.lower_bound + np.nonzero(column)[0])
+            # Figure out the ones that stopped being played
+            for note, start in playing.items():
+                if note not in current:
+                    notes.append([note, start, i])
+                    del playing[note]
+
+            # Figure out the ones that started being played
+            for note in current:
+                if note not in playing:
+                    playing[note] = i
+
+        # Convert to a recarray
+        notes = np.rec.array(notes, names=['pitch', 'start', 'end'])
+        # Convert to ticks
+        notes.start = self.pixel_to_beat(notes.start) * resolution
+        notes.end = self.pixel_to_beat(notes.start) * resolution
+
+        return Track(notes, resolution, self.tempo)
 
     def next_batch(self, order, batch_size=None):
+        """
+        Generate batches for training.
+
+        Parameters
+        ----------
+        order : int
+            number of time steps in the past to consider
+        batch_size : int
+            number of batches to extract (must be smaller than the number of pixels in the time domain)
+
+        Returns
+        -------
+        features : np.ndarray
+            matrix of features used to predict the next column
+        output : np.ndarray
+            matrix of outputs that represents the ground truth
+        """
         batch_size = batch_size or self.values.shape[1]
         assert batch_size <= self.values.shape[1], "batch size can't be larger than data"
         index = np.random.permutation(self.values.shape[1])[:batch_size]
@@ -140,8 +229,10 @@ class Matrix:
 
 
 if __name__ == '__main__':
-    filename = 'for_elise_by_beethoven.mid'
+    filename = 'data/for_elise_by_beethoven.mid'
     track = Track.from_file(filename)
     matrix = track.to_matrix()
+    recovered = matrix.to_track()
+
     matrix.show()
     plt.show()
