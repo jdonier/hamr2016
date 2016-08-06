@@ -200,7 +200,7 @@ class Matrix:
                     playing[note] = i
 
         # sort notes by start time
-        notes = sorted(notes, key=lambda n: n.start)
+        notes = list(sorted(notes, key=lambda n: n[1]))
 
         # Convert to a recarray
         notes = np.rec.array(notes, names=['pitch', 'start', 'end'])
