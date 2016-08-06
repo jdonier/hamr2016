@@ -119,6 +119,25 @@ class Matrix:
         for column in self.values.T:
             notes = self.lower_bound + np.nonzero(column)[0]
 
+        raise NotImplementedError
+
+    def next_batch(self, order, batch_size=None):
+        batch_size = batch_size or self.values.shape[1]
+        assert batch_size <= self.values.shape[1], "batch size can't be larger than data"
+        index = np.random.permutation(self.values.shape[1])[:batch_size]
+
+        # Get the desired output
+        output = self.values[:, index]
+        # Get the input from the previous data
+        features = []
+        for i in index:
+            x = self.values[:, np.maximum(0, i-order):i]
+            # Zero pad if necessary
+            if x.shape[1] < order:
+                x = np.hstack([np.ones((self.values.shape[0], order - x.shape[1])), x])
+            features.append(x)
+        return np.asarray(features), output.T
+
 
 if __name__ == '__main__':
     filename = 'for_elise_by_beethoven.mid'
