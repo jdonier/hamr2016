@@ -25,14 +25,14 @@ class Track:
         
         # Process the track
         notes = []
-
-        if track_id is not None:
-            pattern = [pattern[track_id]]
-
-        # get events from all tracks
         events = []
 
-        for track in pattern:
+        if track_id is None:
+            tracks = pattern
+        else:
+            tracks = [pattern[track_id]]
+
+        for track in tracks:
             for event in track:
                 events.append(event)
 
