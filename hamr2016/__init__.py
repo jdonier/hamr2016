@@ -160,7 +160,7 @@ class Track:
 
 
 class Matrix:
-    def __init__(self, values, lower_bound=21, resolution=8, tempo=120):
+    def __init__(self, values, lower_bound=21, resolution=4, tempo=120):
         self.values = values
         self.lower_bound = lower_bound
         self.resolution = resolution
