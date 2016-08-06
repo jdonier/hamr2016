@@ -203,7 +203,10 @@ class Matrix:
         notes = np.rec.array(notes, names=['pitch', 'start', 'end'])
         # Convert to ticks
         notes.start = self.pixel_to_beat(notes.start) * resolution
-        notes.end = self.pixel_to_beat(notes.start) * resolution
+        notes.end = self.pixel_to_beat(notes.end) * resolution
+
+        # sort notes by start time
+        notes = sorted(notes, key=lambda n: n.start)
 
         return Track(notes, resolution, self.tempo)
 
