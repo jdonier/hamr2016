@@ -26,7 +26,7 @@ class Track:
         self.tempo = tempo
     
     @staticmethod
-    def from_file(filename, track_id=1, tempo=120):
+    def from_file(filename, track_id=None, tempo=120):
         """
         Load a track from file.
 
@@ -34,7 +34,7 @@ class Track:
         ----------
         filename
         track_id : int
-            index of the track to read (default is 1)
+            index of the track to read (default is all tracks)
         tempo : int
             beats per minute (120 if it cannot be read from the midi file)
 
@@ -52,20 +52,34 @@ class Track:
         
         # Process the track
         notes = []
+        events = []
+
+        if track_id is None:
+            tracks = pattern
+        else:
+            tracks = [pattern[track_id]]
+
+        for track in tracks:
+            for event in track:
+                events.append(event)
+
+        events = sorted(events, key=lambda e: (e.tick))
+
         current = {}
-        
-        for event in pattern[track_id]:
+        for event in events:
             if isinstance(event, midi.NoteOnEvent):
                 current[event.get_pitch()] = event.tick
             elif isinstance(event, midi.NoteOffEvent):
                 pitch = event.get_pitch()
-                assert pitch in current, "cannot stop note that isn't playing"
-                
-                # Add the note
-                notes.append((pitch, current[pitch], event.tick))
-                
-                # Delete the note from the currently playing notes
-                del current[pitch]
+
+                if pitch not in current:
+                    warn("cannot stop note %s that isn't playing" % event)
+                else:
+                    # Add the note
+                    notes.append((pitch, current[pitch], event.tick))
+                    
+                    # Delete the note from the currently playing notes
+                    del current[pitch]
                     
         notes = np.rec.array(notes, names=['pitch', 'start', 'end'])
         return Track(notes, pattern.resolution, tempo)
