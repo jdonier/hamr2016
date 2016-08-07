@@ -111,6 +111,31 @@ class Track:
             samples[i:j] += buffer
         
         return display.Audio(samples, rate=sample_rate)
+
+    def fluidsynth(self):
+        """
+        Returns an IPython.display.Audio object with samples rendered via
+        fluidsynth with the Acoustic Grand Piano preset.
+
+        You need fluidsynth, pyfluidsynth and pretty_midi installed for that to work.
+        """
+        import pretty_midi
+        # Create a PrettyMIDI object
+        pm = pretty_midi.PrettyMIDI()
+        # Create an Instrument instance for a cello instrument
+        piano_program = pretty_midi.instrument_name_to_program('Acoustic Grand Piano')
+        piano = pretty_midi.Instrument(program=piano_program)
+        # Iterate over note names, which will be converted to note number later
+        for note in self.notes:
+            # Create a Note instance for this note, starting at 0s and ending at .5s
+            note = pretty_midi.Note(velocity=70, pitch=note.pitch, start=self.tick_to_time(note.start), end=self.tick_to_time(note.end))
+            # Add it to our cello instrument
+            piano.notes.append(note)
+        # Add the cello instrument to the PrettyMIDI object
+        pm.instruments.append(piano)
+        # Play
+        audio_data = pm.fluidsynth()
+        return display.Audio(audio_data, rate=44100)
     
     def to_matrix(self, lower_bound=21, upper_bound=109, resolution=4, strict=True):
         """
