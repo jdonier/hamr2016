@@ -191,7 +191,7 @@ class Matrix:
         self.resolution = resolution
         self.tempo = tempo
     
-    def show(self, ax=None, **kwargs):
+    def show(self, ax=None, start=0, end=None, **kwargs):
         kwargs_default = {
             'cmap': 'binary',
             'origin': 'lower',
@@ -199,7 +199,10 @@ class Matrix:
         }
         kwargs_default.update(kwargs)
         ax = ax or plt.gca()
-        return ax.imshow(self.values, **kwargs_default)
+        assert type(start) == int and start >= 0, "start should be an integer"
+        assert type(end) == int or end is None, "end should be an integer or None"
+        end = end or self.values.shape[1]
+        return ax.imshow(self.values[start:end], **kwargs_default)
     
     def pixel_to_beat(self, pixel):
         return pixel / self.resolution
